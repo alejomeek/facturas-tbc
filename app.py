@@ -49,6 +49,24 @@ if uploaded_factura and uploaded_tbc:
                 # Leer CSV TBC con configuración específica
                 data_tbc = pd.read_csv(uploaded_tbc, delimiter=';', encoding='latin1')
 
+                # ===== VALIDACIÓN: DETECTAR NOTACIÓN CIENTÍFICA EN EAN =====
+                # Convertir a string para detectar formato científico
+                codean_str = data_tbc['Codean'].astype(str)
+
+                # Detectar si hay códigos con notación científica (E+ o e+)
+                tiene_notacion_cientifica = codean_str.str.contains(r'[Ee][+-]', na=False, regex=True).any()
+
+                if tiene_notacion_cientifica:
+                    st.error("⚠️ **ALERTA: Formato Científico Detectado en Códigos de Barras**")
+                    st.error("El archivo TBC contiene códigos EAN en notación científica (ej. 9,42022E+12).")
+                    st.error("**Esto causará cruces incorrectos entre productos.**")
+                    st.warning("**Solución:** Abrir el archivo CSV en Excel, seleccionar la columna 'Codean', cambiar formato a 'Número' (sin decimales), y guardar nuevamente.")
+
+                    # Mostrar ejemplos de códigos problemáticos
+                    ejemplos_cientificos = codean_str[codean_str.str.contains(r'[Ee][+-]', na=False, regex=True)].head(5).tolist()
+                    st.error(f"Ejemplos detectados: {', '.join(ejemplos_cientificos)}")
+                    st.stop()
+
                 # Filtrar productos válidos (eliminar corruptos o vacíos)
                 data_tbc = data_tbc[
                     data_tbc['Codpro'].notna() &
